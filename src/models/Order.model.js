@@ -30,6 +30,9 @@ const Order = sequelize.define('Order', {
   },
   status: {
     type: DataTypes.ENUM('paid', 'pending', 'cancelled', 'delivered', 'shipped', 'returned', 'refunded')
+  },
+  stripe_pi: {
+    type: DataTypes.STRING
   }
 }, {
   timestamps: false
