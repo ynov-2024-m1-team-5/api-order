@@ -11,8 +11,8 @@ const Order = sequelize.define('Order', {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: 'shoppingcart',
-      key: 'id'
+      model: 'ShoppingCarts',
+      key: 'shoppingCartId'
     }
   },
   customer_id: {
@@ -29,7 +29,7 @@ const Order = sequelize.define('Order', {
     type: DataTypes.DATE
   },
   status: {
-    type: DataTypes.STRING
+    type: DataTypes.ENUM('paid', 'pending', 'cancelled', 'delivered', 'shipped', 'returned', 'refunded')
   }
 }, {
   timestamps: false
