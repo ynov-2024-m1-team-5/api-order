@@ -18,8 +18,9 @@ const orderStatus = {
 }
 
 exports.createOrder = async (req, res) => {
+  try {
   // recupère le panier de l'utilisateur
-  const shoppingCart = await ShoppingCart.findOne({ where: { customerId: req.userToken.id } });
+  const shoppingCart = await ShoppingCart.findOne({ where: { customerId: req.userToken.customer_id } });
   if (!shoppingCart) {
     return res.status(400).json({ success: false, message: "Shopping cart not found" });
   }
@@ -30,8 +31,8 @@ exports.createOrder = async (req, res) => {
 
   // crée une commande
   const order = await Order.create({
-    shoppingCartId: shoppingCart.id,
-    customerId: req.userToken.id,
+    shoppingCart_id: shoppingCart.shoppingCartId,
+    customer_id: req.userToken.customer_id,
     totalPrice: shoppingCart.totalPrice,
     date: new Date(),
     status: orderStatus.PENDING
@@ -56,9 +57,13 @@ exports.createOrder = async (req, res) => {
     success: true,
     data: paymentIntent.client_secret
   })
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
 }
 
 exports.confirmOrder = async (req, res) => {
+  try{
   // recupère la commande
   const order = await Order.findOne({ where: { id: req.params.order_id } });
   if (!order) {
@@ -91,7 +96,7 @@ exports.confirmOrder = async (req, res) => {
   await CartProduct.update({ isOrder: true }, { where: { shoppingCartId: order.shoppingCartId } });
 
   //envoie un email de confirmation
-  const results = await sequelize.query(`SELECT * from customer WHERE id=${order.customerId}`, { type: sequelize.QueryTypes.SELECT }); 
+  const results = await sequelize.query(`SELECT * from customer WHERE id=${order.customer_id}`, { type: sequelize.QueryTypes.SELECT }); 
   const user = results[0];
   sendMail(user.email, `${user.fist_name} ${user.fist_name}`, 'Order Confirmation', `Your order has been confirmed.`, 'Ecommerce App');
   // retourne la commande
@@ -99,9 +104,13 @@ exports.confirmOrder = async (req, res) => {
     success: true,
     data: order
   })
+} catch (error) {
+  return res.status(400).json({ success: false, message: error.message });
+}
 }
 
 exports.getAllOrders = async (req, res) => {
+  try {
   // recupère tous les commandes
   const orders = await Order.findAll();
   // retourne les commandes
@@ -109,4 +118,20 @@ exports.getAllOrders = async (req, res) => {
     success: true,
     data: orders
   })
+  }
+  catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+}
+
+exports.getOrderById = async (req, res) => {
+  try {
+    const order = await Order.findOne({ where: { id: req.params.order_id } });
+    return res.send({
+      success: true,
+      data: order
+    })
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
 }
