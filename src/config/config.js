@@ -22,7 +22,7 @@ switch (environment) {
 dotenv.config({ path: envFile });
 
 // destructuration des variables d'environement dans le fichier .env
-const { DB_USER, DB_PWD, DB_NAME, DB_HOST, DB_PORT } = process.env;
+const { DB_USER, DB_PWD, DB_NAME, DB_HOST, DB_PORT, API_KEY} = process.env;
 
 // Si pas de variables d'environement, on lève une erreur
 if (!DB_USER || !DB_PWD || !DB_NAME || !DB_HOST || !DB_PORT) {
@@ -36,6 +36,7 @@ const commonConfig = {
   database: DB_NAME,
   host: DB_HOST,
   port: DB_PORT,
+  api_key_brevo: API_KEY,
   dialect: "postgres"
 }
 

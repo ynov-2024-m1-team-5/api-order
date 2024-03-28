@@ -2,6 +2,8 @@ const {Stripe} = require('stripe')
 const Order = require('../models/Order.model');
 const ShoppingCart = require('../models/ShoppingCart.model');
 const CartProduct = require('../models/CartProduct.model');
+const sendMail = require('../middlewares/sendMail');
+const sequelize = require('../database');
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -88,6 +90,10 @@ exports.confirmOrder = async (req, res) => {
   // change le statut des produits dans le panier
   await CartProduct.update({ isOrder: true }, { where: { shoppingCartId: order.shoppingCartId } });
 
+  //envoie un email de confirmation
+  const results = await sequelize.query(`SELECT * from customer WHERE id=${order.customerId}`, { type: sequelize.QueryTypes.SELECT }); 
+  const user = results[0];
+  sendMail(user.email, `${user.fist_name} ${user.fist_name}`, 'Order Confirmation', `Your order has been confirmed.`, 'Ecommerce App');
   // retourne la commande
   res.send({
     success: true,
