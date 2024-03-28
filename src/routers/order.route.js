@@ -5,8 +5,8 @@ const verifyUser = require('../middlewares/verifyUser');
 const verifyIsAdmin = require('../middlewares/verifyIsAdmin');
 
 
-router.get('/',verifyIsAdmin, orderController.getAllOrders);
-router.get('/:order_id',verifyIsAdmin, orderController.getOrderById);
+router.get('/', orderController.getAllOrders);
+router.get('/:order_id', orderController.getOrderById);
 router.post('/:customer_id',verifyUser, orderController.createOrder);
 router.patch('/:customer_id/:order_id',verifyUser, orderController.confirmOrder);
 
