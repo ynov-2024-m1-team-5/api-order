@@ -20,13 +20,20 @@ const orderStatus = {
 exports.createOrder = async (req, res) => {
   try {
   // recupère le panier de l'utilisateur
-  const shoppingCart = await ShoppingCart.findOne({ where: { customerId: req.userToken.customer_id } });
+  const shoppingCart = await ShoppingCart.findOne({
+    where: {
+        customerId: req.userToken.customer_id
+    }
+});
+  console.log({shoppingCart});
   if (!shoppingCart) {
-    return res.status(400).json({ success: false, message: "Shopping cart not found" });
+    throw new Error("Shopping cart not found");
   }
   //Si le panier est vide
-  if (shoppingCart.totalPrice === 0) {
-    return res.status(400).json({ success: false, message: "Shopping cart is empty" });
+ const countItems= CartProduct.count({ where: { shoppingCartId: shoppingCart.shoppingCartId, isOrder:false} });
+ console.log({countItems});
+  if (!countItems) {
+    throw new Error("Shopping cart is empty");
   }
 
   // crée une commande
@@ -37,7 +44,6 @@ exports.createOrder = async (req, res) => {
     date: new Date(),
     status: orderStatus.PENDING
   });
-
   // STRIPE INTEGRATION
 
   // crée un PaymentIntent
@@ -48,6 +54,8 @@ exports.createOrder = async (req, res) => {
 
   order.stripe_pi = paymentIntent.id;
   await order.save();
+console.log({order});
+
 
   //Paiement
   const session = await stripe.checkout.sessions.create({
@@ -62,11 +70,11 @@ exports.createOrder = async (req, res) => {
       enabled: true,
     },
     mode: 'payment',
-    success_url: `${process.env.CLIENT_URL}/order/success`,
-    cancel_url: `${process.env.CLIENT_URL}/order/cancel`,
+    success_url: `${process.env.CLIENT_URL}/shop`,
+    cancel_url: `${process.env.CLIENT_URL}/panier`,
   });
 
-  res.redirect(303, session.url);
+  return res.redirect(303, session.url);
 
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message });
