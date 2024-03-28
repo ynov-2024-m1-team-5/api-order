@@ -104,7 +104,6 @@ exports.createOrder = async (req, res) => {
 // } catch (error) {
 //   return res.status(400).json({ success: false, message: error.message });
 // }
-}
 
 exports.getAllOrders = async (req, res) => {
   try {

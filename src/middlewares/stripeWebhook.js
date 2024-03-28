@@ -1,12 +1,12 @@
-import sequelize from '../database';
-import CartProduct from '../models/CartProduct.model';
-import Order from '../models/Order.model';
-import ShoppingCart from '../models/ShoppingCart.model';
+const sequelize = require('../database');
+const CartProduct = require('../models/CartProduct.model');
+const Order = require('../models/Order.model');
+const ShoppingCart = require('../models/ShoppingCart.model');
 
 const {Stripe} = require('stripe')
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-const stripeWebhook = async (request, response) => {
+exports.stripeWebhook = async (request, response) => {
   let event = request.body;
   // Only verify the event if you have an endpoint secret defined.
   // Otherwise use the basic event deserialized with JSON.parse
@@ -59,5 +59,3 @@ const stripeWebhook = async (request, response) => {
   // Return a 200 response to acknowledge receipt of the event
   response.send();
 }
-
-export default stripeWebhook;

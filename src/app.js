@@ -4,7 +4,7 @@ const sequelize = require('./database');
 require('dotenv').config();
 const app = express();
 const apiRouter = require('./routers/index');
-const { default: stripeWebhook } = require('./middlewares/stripeWebhook');
+const {stripeWebhook} = require('./middlewares/stripeWebhook');
 
 app.use(express.json());
 app.use(cors());
