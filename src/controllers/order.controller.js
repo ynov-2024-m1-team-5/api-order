@@ -14,7 +14,8 @@ const orderStatus = {
   DELIVERED: 'delivered',
   SHIPPED: 'shipped',
   RETURNED: 'returned',
-  REFUNDED: 'refunded'
+  REFUNDED: 'refunded', 
+  REFUND_ON_DEMAND: 'refund on demand'
 }
 
 exports.createOrder = async (req, res) => {
@@ -109,4 +110,46 @@ exports.getAllOrders = async (req, res) => {
     success: true,
     data: orders
   })
+}
+
+exports.refund = async (req, res) => {
+  // get order
+  const order = await Order.findOne({ where: { id: req.params.order_id } });
+  if (!order) {
+    return res.status(400).json({ success: false, message: "Order not found" });
+  }
+  // change status order
+  order.status = orderStatus.REFUND_ON_DEMAND;
+  // send email to user
+  const results = await sequelize.query(`SELECT * from customer WHERE id=${order.customerId}`, { type: sequelize.QueryTypes.SELECT }); 
+  const user = results[0];
+  sendMail(user.email, `${user.fist_name} ${user.fist_name}`, 'Refund on demand', `Your refund on demand has been transfered.`, 'Ecommerce App');
+  sendMail(`ynov.team5@gmail.com`, `Admin`, 'Refund on demand', `Client ${user.fist_name} ${user.fist_name} asked for a refund. Order command : ${order.id}`, 'Ecommerce App');
+  res.send({
+    success: true,
+    data: "Mails send successfully"
+  })
+}
+
+exports.refunded = async (req, res) => {
+  // get order
+  const order = await Order.findOne({ where: { id: req.params.order_id } });
+  if (!order) {
+    return res.status(400).json({ success: false, message: "Order not found" });
+  }
+  // send money back to user
+  try {
+    const refunded = await stripe.refunds.create({ payment_intent: order.stripe_pi });
+    // change status order
+    order.status = orderStatus.REFUNDED;
+    res.send({
+      success: true,
+      data: refunded
+    })
+  } catch {
+    res.send({
+      success: false,
+      message: "Refund failed"
+    });
+  }
 }
