@@ -44,5 +44,5 @@ const commonConfig = {
 module.exports = {
   development: commonConfig,
   test: commonConfig,
-  production: commonConfig
+  production: {...commonConfig, ssl:true}
 }
