@@ -113,41 +113,88 @@ exports.getAllOrders = async (req, res) => {
 }
 
 exports.refund = async (req, res) => {
-  // get order
-  const order = await Order.findOne({ where: { id: req.params.order_id } });
-  if (!order) {
-    return res.status(400).json({ success: false, message: "Order not found" });
+  try {
+    // get order
+    const order = await Order.findOne({ where: { id: req.params.order_id } });
+    if (!order) {
+      return res.status(400).json({ success: false, message: "Order not found" });
+    }
+    if (order.status !== orderStatus.PAID) {
+      return res.status(400).json({ success: false, message: "Order can't be refunded" });
+    }
+  
+    // change status order
+    order.status = orderStatus.REFUND_ON_DEMAND;
+    order.save();
+    // send email to user
+    const results = await sequelize.query(`SELECT * from customer WHERE id=${order.customer_id}`, { type: sequelize.QueryTypes.SELECT }); 
+    const user = results[0];
+    console.log({user});
+
+    const text = `
+Madame, Monsieur,\n
+\n
+Nous vous remercions d'avoir pris le temps de nous contacter concernant votre récente expérience avec notre site My Store. Nous comprenons l'importance de votre satisfaction en tant que client, et nous nous engageons à résoudre cette situation dans les meilleurs délais.\n
+\n
+Nous avons bien pris note de votre demande de remboursement intégral pour votre achat du ${order.date} d'un montant de ${order.totalPrice}€. Votre demande a été transmise à notre service concerné, qui procédera à une analyse approfondie de la situation. Nous vous tiendrons informé de l'avancement du traitement de votre demande et vous contacterons dès que possible pour vous fournir une solution appropriée.\n
+\n
+Dans l'intervalle, si vous avez des questions supplémentaires ou si vous avez besoin de plus amples informations, n'hésitez pas à nous contacter à tout moment. Nous sommes là pour vous assister et pour garantir votre entière satisfaction.\n
+\n
+Nous vous remercions de votre compréhension et de votre patience pendant que nous travaillons à résoudre cette situation. Votre satisfaction demeure notre priorité absolue.\n
+\n
+Cordialement,\n
+\n
+L'équipe de support/clientèle\n
+My Store\n
+Veillez ne pas répondre à cet email.
+    `
+
+    sendMail(user.email, `${user.first_name} ${user.last_name}`, 'Confirmation de prise en charge de votre demande de remboursement', text, 'My Store');
+    sendMail(`ynov.team5@gmail.com`, `Admin`, 'Refund on demand', `Client ${user.first_name} ${user.last_name} asked for a refund. Order command : ${order.id}`, 'My Store');
+    return res.send({
+      success: true,
+      data: "Mails send successfully"
+    })
+  } catch (err){
+    return res.status(400).json({ success: false, message: "Refund failed" });
   }
-  // change status order
-  order.status = orderStatus.REFUND_ON_DEMAND;
-  // send email to user
-  const results = await sequelize.query(`SELECT * from customer WHERE id=${order.customerId}`, { type: sequelize.QueryTypes.SELECT }); 
-  const user = results[0];
-  sendMail(user.email, `${user.fist_name} ${user.fist_name}`, 'Refund on demand', `Your refund on demand has been transfered.`, 'Ecommerce App');
-  sendMail(`ynov.team5@gmail.com`, `Admin`, 'Refund on demand', `Client ${user.fist_name} ${user.fist_name} asked for a refund. Order command : ${order.id}`, 'Ecommerce App');
-  res.send({
-    success: true,
-    data: "Mails send successfully"
-  })
 }
 
 exports.refunded = async (req, res) => {
+  try {
   // get order
   const order = await Order.findOne({ where: { id: req.params.order_id } });
   if (!order) {
     return res.status(400).json({ success: false, message: "Order not found" });
   }
   // send money back to user
-  try {
     const refunded = await stripe.refunds.create({ payment_intent: order.stripe_pi });
     // change status order
     order.status = orderStatus.REFUNDED;
-    res.send({
+    order.save();
+    // send email to user
+    const results = await sequelize.query(`SELECT * from customer WHERE id=${order.customer_id}`, { type: sequelize.QueryTypes.SELECT }); 
+    const user = results[0];
+    const text = `
+    Madame, Monsieur,\n
+    \n
+    Nous vous informons que votre demande de remboursement a été traitée avec succès. Vous devriez voir le montant de ${order.totalPrice}€ apparaître sur votre compte bancaire dans les prochains jours.\n
+    \n
+    Nous vous remercions de votre confiance et nous espérons vous revoir bientôt sur notre site My Store.\n
+    \n
+    Cordialement,\n
+    \n
+    L'équipe de support/clientèle\n
+    My Store\n
+    Veillez ne pas répondre à cet email.
+        `
+    sendMail(user.email, `${user.first_name} ${user.last_name}`,'Confirmation de remboursement', text, 'My Store');
+    return res.send({
       success: true,
       data: refunded
     })
-  } catch {
-    res.send({
+  } catch (err) {
+    return res.send({
       success: false,
       message: "Refund failed"
     });
