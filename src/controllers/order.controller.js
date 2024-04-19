@@ -298,3 +298,35 @@ exports.refunded = async (req, res) => {
     });
   }
 }
+
+exports.getOrdersByCustomerId = async (req, res) => {
+  try {
+    // recupère tous les commandes
+    const allOrders = await Order.findAll({ where: { customer_id: req.params.customer_id } });
+    // recuperer les produits de chaque commande
+    const orders = await Promise.all(allOrders.map(async order => {
+    let orderItem = {...order.dataValues}
+    let cartProds = [];
+    const cartProducts = await CartProduct.findAll({
+      where: {
+          shoppingCartId: order.shoppingCart_id
+      },
+  });
+    await Promise.all(cartProducts.map( async cartProduct => {
+      const product
+      = await Product.findOne({ where: { id: cartProduct.productId } });
+      cartProds.push({...cartProduct.dataValues,product: product.dataValues});
+    }))
+
+    orderItem.cartProducts = cartProds;
+    return orderItem;
+  })
+)
+    return res.send({
+      success: true,
+      data: orders
+    })
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
+}
