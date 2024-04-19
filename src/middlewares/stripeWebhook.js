@@ -79,7 +79,7 @@ const stripeWebhook = async (request, response) => {
         await CartProduct.update({ isOrder: true }, { where: { shoppingCartId: shoppingCart.shoppingCartId } });
         // envoyer la facture par email
         const invoice = await stripe.invoices.retrieve(checkoutSession.invoice);
-        sendMail(user.email,`${user.firstname} ${user.lastname}`,'Confirmation du paiement de la commande',`Votre commande a bien été enregistrée. Votre numéro de commande est le ${order.order_id}. Télècharger votre facture ici: ${invoice.invoice_pdf}`,"My Store");
+        sendMail(user.email,`${user.firstname} ${user.lastname}`,'Confirmation du paiement de la commande',`Votre commande a bien été enregistrée. Votre numéro de commande est le ${order.id}.`,"My Store");
         break;
 
       default:
