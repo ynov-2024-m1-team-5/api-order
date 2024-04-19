@@ -4,9 +4,12 @@ const sequelize = require('./database');
 require('dotenv').config();
 const app = express();
 const apiRouter = require('./routers/index');
+const stripeWebhook = require('./middlewares/stripeWebhook');
 
-app.use(express.json());
 app.use(cors());
+app.use('/webhook', express.raw({ type: 'application/json' }));
+app.post('/webhook', stripeWebhook);
+app.use(express.json());
 app.use('/api/v1', apiRouter);
 
 app.get('/',(_,res)=>{
