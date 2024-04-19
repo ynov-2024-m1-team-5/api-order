@@ -9,6 +9,7 @@ const {orderStatus} = require('../enums');
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+
 exports.createOrder = async (req, res) => {
   try {
   // recupère le panier de l'utilisateur
