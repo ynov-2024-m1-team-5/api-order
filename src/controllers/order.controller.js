@@ -6,6 +6,7 @@ const sendMail = require('../middlewares/sendMail');
 const sequelize = require('../database');
 const Product = require('../models/Product.model');
 const {orderStatus} = require('../enums');
+const { or } = require('sequelize');
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -142,9 +143,29 @@ console.log({line_items});
 exports.getAllOrders = async (req, res) => {
   try {
   // recupère tous les commandes
-  const orders = await Order.findAll();
+  const allOrders = await Order.findAll()
+  // recuperer les produits de chaque commande
+  const orders = await Promise.all(allOrders.map(async order => {
+    let orderItem = {...order.dataValues}
+    let cartProds = [];
+    const cartProducts = await CartProduct.findAll({
+      where: {
+          shoppingCartId: order.shoppingCart_id
+      },
+  });
+    await Promise.all(cartProducts.map( async cartProduct => {
+      const product
+      = await Product.findOne({ where: { id: cartProduct.productId } });
+      cartProds.push({...cartProduct.dataValues,product: product.dataValues});
+    }))
+
+    orderItem.cartProducts = cartProds;
+    return orderItem;
+  })
+)
+
   // retourne les commandes
-  res.send({
+  return res.send({
     success: true,
     data: orders
   })
@@ -157,9 +178,25 @@ exports.getAllOrders = async (req, res) => {
 exports.getOrderById = async (req, res) => {
   try {
     const order = await Order.findOne({ where: { id: req.params.order_id } });
+    
+      let orderItem = {...order.dataValues}
+      let cartProds = [];
+      const cartProducts = await CartProduct.findAll({
+        where: {
+            shoppingCartId: order.shoppingCart_id
+        },
+    });
+      await Promise.all(cartProducts.map( async cartProduct => {
+        const product
+        = await Product.findOne({ where: { id: cartProduct.productId } });
+        cartProds.push({...cartProduct.dataValues,product: product.dataValues});
+      }))
+  
+      orderItem.cartProducts = cartProds;
+  
     return res.send({
       success: true,
-      data: order
+      data: orderItem
     })
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message });

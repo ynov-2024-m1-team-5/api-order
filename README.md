@@ -4,34 +4,19 @@ Cette API fournit des points d'accès pour gérer les commandes.
 
 ## Créer une commande
 ```
-Endpoint: /api/v1/orders/:customer_id
+Endpoint: /api/v1/customers/:customer_id
 Méthode: POST
 Paramètres:
   - customer_id : L'id de l'utilisateur
 
 Retourne:
   - { success : (boolean) Etat de la requete,
-      data: (string) Le PaymentIntent de stripe
+      data: (string) Stripe session url 
     }
 
 ```
 
-## Confirme une commande
-
-```
-Endpoint: /api/v1/orders/:customer_id/:order_id
-Méthode: PATCH
-Paramètres:
-  - customer_id : L'id de l'utilisateur
-  - order_id : L'identifiant de la commande à confirmer.
-
-Retourne:
-  - { success : (boolean) Etat de la requete,
-      data: (object) La commande
-    }
-```
-
-## Récupère toutes les commandes
+## Récupère toutes les commandes (Admin)
 
 ```
 Endpoint: /api/v1/orders
@@ -43,7 +28,7 @@ Retourne:
     }
 ```
 
-## Récupère une commande par son identifiant en utilisant l'API /api/v1/orders.
+## Récupère une commande par son identifiant. (Admin)
 ```
 
 Endpoint: /api/v1/orders/:order_id
@@ -56,4 +41,37 @@ Retourne:
       data: (object) La commande
     }
 
+```
+
+## Demande de remboursement
+```
+Endpoint: /api/v1/customers/:customer_id/orders/:order_id/refund
+
+Méthode: POST
+
+Paramètres:
+  - customer_id : L'id de l'utilisateur
+  - order_id : L'identifiant de la commande à récupérer.
+
+Retourne:
+  - { success : (boolean) Etat de la requete,
+      data: (string) Message de confirmation 
+    }
+```
+
+## Valider le remboursement (Admin)
+
+```
+Endpoint: /api/v1/customers/:customer_id/orders/:order_id/refunded
+
+Méthode: POST
+
+Paramètres:
+  - customer_id : L'id de l'utilisateur
+  - order_id : L'identifiant de la commande à récupérer.
+
+Retourne:
+  - { success : (boolean) Etat de la requete,
+      data: (object) Le payment intent 
+    }
 ```
