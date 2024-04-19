@@ -218,10 +218,15 @@ Veillez ne pas répondre à cet email.
 exports.refunded = async (req, res) => {
   try {
   // get order
-  const order = await Order.findOne({ where: { id: req.params.order_id } });
+  const order = await Order.findOne({ where: { id: req.params.order_id, customer_id:req.params.customer_id } });
   if (!order) {
     return res.status(400).json({ success: false, message: "Order not found" });
   }
+  // check if order is refundable
+  if (order.status !== orderStatus.REFUND_ON_DEMAND) {
+    return res.status(400).json({ success: false, message: "Order can't be refunded" });
+  }
+
   // send money back to user
     const refunded = await stripe.refunds.create({ payment_intent: order.stripe_pi });
     // change status order
