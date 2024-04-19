@@ -4,18 +4,10 @@ const ShoppingCart = require('../models/ShoppingCart.model');
 const CartProduct = require('../models/CartProduct.model');
 const sendMail = require('../middlewares/sendMail');
 const sequelize = require('../database');
+const Product = require('../models/Product.model');
+const {orderStatus} = require('../enums');
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-const orderStatus = {
-  PAID: 'paid',
-  PENDING: 'pending',
-  CANCELLED: 'cancelled',
-  DELIVERED: 'delivered',
-  SHIPPED: 'shipped',
-  RETURNED: 'returned',
-  REFUNDED: 'refunded'
-}
 
 exports.createOrder = async (req, res) => {
   try {
@@ -46,72 +38,105 @@ exports.createOrder = async (req, res) => {
   });
   // STRIPE INTEGRATION
 
-  // crée un PaymentIntent
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: shoppingCart.totalPrice * 100,
-    currency: 'eur',
-  })
+const cartProducts = await CartProduct.findAll({
+  where: {
+      shoppingCartId: shoppingCart.shoppingCartId
+  },
+});
 
-  order.stripe_pi = paymentIntent.id;
-  await order.save();
-console.log({order});
+const line_items = await Promise.all(cartProducts.map( async cartProduct => {
+  const product = await Product.findOne({ where: { id: cartProduct.productId } });
+  const item = {
+    price_data: {
+      currency: 'eur',
+      product_data: {
+        name: product.name,
+        images: [product.thumbnail],
+        description: product.description
+      },
+      unit_amount: product.price * 100,
+    },
+    quantity: cartProduct.quantitySelected
+  }
+  console.log({product,item});
 
+  return item;
+}))
+
+console.log({line_items});
 
   //Paiement
+  const results = await sequelize.query(`SELECT * from customer WHERE id=${req.userToken.customer_id}`, { type: sequelize.QueryTypes.SELECT }); 
+  const user = results[0];
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
-    line_items: [
-      {
-        price: '{{ONE_TIME_PRICE_ID}}',
-        quantity: 1,
-      },
-    ],
+   line_items,
     invoice_creation: {
       enabled: true,
     },
+    shipping_address_collection: {
+      allowed_countries: ['FR'],
+    },
+    shipping_options: [
+      {
+        shipping_rate_data: {
+          type: 'fixed_amount',
+          fixed_amount: {
+            amount: 0,
+            currency: 'eur',
+          },
+          display_name: 'Livraison standard',
+          delivery_estimate: {
+            minimum: {
+              unit: 'business_day',
+              value: 5,
+            },
+            maximum: {
+              unit: 'business_day',
+              value: 7,
+            },
+          },
+        },
+      },
+      {
+        shipping_rate_data: {
+          type: 'fixed_amount',
+          fixed_amount: {
+            amount: 599,
+            currency: 'eur',
+          },
+          display_name: 'Livraison rapide',
+          delivery_estimate: {
+            minimum: {
+              unit: 'business_day',
+              value: 1,
+            },
+            maximum: {
+              unit: 'business_day',
+              value: 1,
+            },
+          },
+        },
+      },
+    ],
+    customer_email: user.email,
     mode: 'payment',
     success_url: `${process.env.CLIENT_URL}/shop`,
     cancel_url: `${process.env.CLIENT_URL}/panier`,
   });
 
-  return res.redirect(303, session.url);
+  // enregistre l'id de la session de paiement
+  order.stripe_pi = session.payment_intent;
+  await order.save();
+
+  console.log({order,session})
+  
+  return res.send({success:true, url: session.url})
 
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message });
   }
 }
-
-// exports.confirmOrder = async (req, res) => {
-//   try{
-//   // recupère la commande
-//   const order = await Order.findOne({ where: { id: req.params.order_id } });
-//   if (!order) {
-//     return res.status(400).json({ success: false, message: "Order not found" });
-//   }
-//   // confirmer un PaymentIntent
-//   const paymentIntent = await stripe.paymentIntents.confirm(order.stripe_pi,{
-//     payment_method: req.body.payment_method,
-//     payment_method_data: {
-//       billing_details: {
-//         name: req.body.name
-//       },
-//       card: {
-//         number: req.body.number,
-//         exp_month: req.body.exp_month,
-//         exp_year: req.body.exp_year,
-//         cvc: req.body.cvc
-//       }
-//     },
-//     shipping: req.body.shipping
-//   });
-
-//   if (paymentIntent.status !== 'succeeded') {
-//     return res.status(400).json({ success: false, message: "Payment failed" });
-//   }
-
-// } catch (error) {
-//   return res.status(400).json({ success: false, message: error.message });
-// }
 
 exports.getAllOrders = async (req, res) => {
   try {
