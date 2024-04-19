@@ -29,7 +29,7 @@ const Order = sequelize.define('Order', {
     type: DataTypes.DATE
   },
   status: {
-    type: DataTypes.ENUM('paid', 'pending', 'cancelled', 'delivered', 'shipped', 'returned', 'refunded')
+    type: DataTypes.ENUM('paid', 'pending', 'cancelled', 'delivered', 'shipped', 'returned', 'refunded', "refund on demand")
   },
   stripe_pi: {
     type: DataTypes.STRING

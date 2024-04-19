@@ -8,12 +8,11 @@ const sendMail = (receiver_email, receiver_name, subject, content, sender_name) 
   let apiKey = apiInstance.authentications['apiKey'];
   apiKey.apiKey = process.env.API_KEY;
   
-console.log({apikey: apiKey.apiKey})
   let sendSmtpEmail = new brevo.SendSmtpEmail();
 
   sendSmtpEmail.subject = `${subject}`;
   sendSmtpEmail.htmlContent = `<html><body><h1>${subject}</h1>${content}</body></html>`;
-  sendSmtpEmail.sender = { "name": `${sender_name}`, "email": "ami95190@gmail.com" };
+  sendSmtpEmail.sender = { "name": `${sender_name}`, "email": "ynov.team5@gmail.com" };
   sendSmtpEmail.to = [
     { "email": `${receiver_email}`, "name": `${receiver_name}` }
   ];
