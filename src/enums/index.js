@@ -5,7 +5,8 @@ const orderStatus = {
   DELIVERED: 'delivered',
   SHIPPED: 'shipped',
   RETURNED: 'returned',
-  REFUNDED: 'refunded'
+  REFUNDED: 'refunded',
+  REFUND_ON_DEMAND: 'refund on demand'
 }
 
 module.exports = {
