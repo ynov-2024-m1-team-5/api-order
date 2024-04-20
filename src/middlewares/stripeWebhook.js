@@ -60,6 +60,7 @@ const stripeWebhook = async (request, response) => {
         const user = results[0];
         const order = await Order.findOne({ where: { customer_id: user.id } });
         order.stripe_pi = checkoutSession.payment_intent;
+        order.totalPrice = checkoutSession.amount_total / 100;
         console.log({
          order
         })
@@ -77,8 +78,6 @@ const stripeWebhook = async (request, response) => {
         await order.save();
         // change le statut des produits dans le panier
         await CartProduct.update({ isOrder: true }, { where: { shoppingCartId: shoppingCart.shoppingCartId } });
-        // envoyer la facture par email
-        const invoice = await stripe.invoices.retrieve(checkoutSession.invoice);
         sendMail(user.email,`${user.firstname} ${user.lastname}`,'Confirmation du paiement de la commande',`Votre commande a bien été enregistrée. Votre numéro de commande est le ${order.id}.`,"My Store");
         break;
 
