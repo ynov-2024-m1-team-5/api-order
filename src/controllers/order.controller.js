@@ -178,22 +178,21 @@ exports.getAllOrders = async (req, res) => {
 exports.getOrderById = async (req, res) => {
   try {
     const order = await Order.findOne({ where: { id: req.params.order_id } });
-    
       let orderItem = {...order.dataValues}
       let cartProds = [];
-      const cartProducts = await CartProduct.findAll({
-        where: {
-            shoppingCartId: order.shoppingCart_id
-        },
-    });
-      await Promise.all(cartProducts.map( async cartProduct => {
-        const product
-        = await Product.findOne({ where: { id: cartProduct.productId } });
-        cartProds.push({...cartProduct.dataValues,product: product.dataValues});
-      }))
-  
-      orderItem.cartProducts = cartProds;
-  
+      const session = await stripe.checkout.sessions.list({ payment_intent: order.stripe_pi})
+      const line_items = await stripe.checkout.sessions.listLineItems(session.data[0].id)
+      cartProds = await Promise.all(line_items.data.map( async item => {
+        const product = await Product.findOne({ where: { name: item.description } });
+      return {
+          cartProductId: item.id,
+          quantitySelected: item.quantity,
+          product: product.dataValues
+        }
+      })
+    )
+    orderItem.cartProducts = cartProds;
+
     return res.send({
       success: true,
       data: orderItem
