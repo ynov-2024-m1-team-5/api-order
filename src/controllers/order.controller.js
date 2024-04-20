@@ -145,23 +145,41 @@ exports.getAllOrders = async (req, res) => {
   // recupère tous les commandes
   const allOrders = await Order.findAll()
   // recuperer les produits de chaque commande
-  const orders = await Promise.all(allOrders.map(async order => {
+  const orders = await Promise.all(allOrders.sort((a,b)=>new Date(b.date) - new Date(a.date)).map(async order => {
     let orderItem = {...order.dataValues}
     let cartProds = [];
-    const cartProducts = await CartProduct.findAll({
-      where: {
-          shoppingCartId: order.shoppingCart_id
-      },
-  });
-    await Promise.all(cartProducts.map( async cartProduct => {
-      const product
-      = await Product.findOne({ where: { id: cartProduct.productId } });
-      cartProds.push({...cartProduct.dataValues,product: product.dataValues});
-    }))
+    if (order.status == orderStatus.PENDING) {
+      orderItem.cartProducts = [];
+      return orderItem;
+    }else if (order.method == null) {
+      orderItem.cartProducts = [];
+      return orderItem;
+    }else if (order.stripe_pi == undefined) {
+      orderItem.cartProducts = [];
+      return orderItem;
+    }
 
+    
+    const session = await stripe.checkout.sessions.list({ payment_intent: order.stripe_pi})
+    if (!session || session.data.length === 0) {
+      orderItem.cartProducts = [];
+      return orderItem;
+    }
+    orderItem.totalPrice = session.data[0].amount_total / 100;
+    const line_items = await stripe.checkout.sessions.listLineItems(session.data[0].id)
+    cartProds = await Promise.all(line_items.data.map( async item => {
+      const product = await Product.findOne({ where: { name: item.description } });
+    return {
+        cartProductId: item.id,
+        quantitySelected: item.quantity,
+        product: product.dataValues
+      }
+    })
+  )
     orderItem.cartProducts = cartProds;
     return orderItem;
   })
+
 )
 
   // retourne les commandes
@@ -177,10 +195,23 @@ exports.getAllOrders = async (req, res) => {
 
 exports.getOrderById = async (req, res) => {
   try {
+    console.log("getOrderById")
     const order = await Order.findOne({ where: { id: req.params.order_id } });
       let orderItem = {...order.dataValues}
       let cartProds = [];
+      if (order.status == orderStatus.PENDING) {
+        orderItem.cartProducts = [];
+        return res.send({success: true, data: orderItem})
+      }else if (order.method == null) {
+        orderItem.cartProducts = [];
+        return res.send({success: true, data: orderItem})
+      }else if (order.stripe_pi == undefined) {
+        orderItem.cartProducts = [];
+        return res.send({success: true, data: orderItem})
+      }
+      
       const session = await stripe.checkout.sessions.list({ payment_intent: order.stripe_pi})
+      orderItem.totalPrice = session.data[0].amount_total / 100;
       const line_items = await stripe.checkout.sessions.listLineItems(session.data[0].id)
       cartProds = await Promise.all(line_items.data.map( async item => {
         const product = await Product.findOne({ where: { name: item.description } });
@@ -303,23 +334,43 @@ exports.getOrdersByCustomerId = async (req, res) => {
     // recupère tous les commandes
     const allOrders = await Order.findAll({ where: { customer_id: req.params.customer_id } });
     // recuperer les produits de chaque commande
-    const orders = await Promise.all(allOrders.map(async order => {
+  // recuperer les produits de chaque commande
+  const orders = await Promise.all(allOrders.sort((a,b)=>new Date(b.date) - new Date(a.date)).map(async order => {
     let orderItem = {...order.dataValues}
     let cartProds = [];
-    const cartProducts = await CartProduct.findAll({
-      where: {
-          shoppingCartId: order.shoppingCart_id
-      },
-  });
-    await Promise.all(cartProducts.map( async cartProduct => {
-      const product
-      = await Product.findOne({ where: { id: cartProduct.productId } });
-      cartProds.push({...cartProduct.dataValues,product: product.dataValues});
-    }))
+    if (order.status == orderStatus.PENDING) {
+      orderItem.cartProducts = [];
+      return orderItem;
+    }else if (order.method == null) {
+      orderItem.cartProducts = [];
+      return orderItem;
+    }else if (order.stripe_pi == undefined) {
+      orderItem.cartProducts = [];
+      return orderItem;
+    }
 
+    
+    const session = await stripe.checkout.sessions.list({ payment_intent: order.stripe_pi})
+    console.log({session});
+    if (!session || session.data.length === 0) {
+      orderItem.cartProducts = [];
+      return orderItem;
+    }
+    orderItem.totalPrice = session.data[0].amount_total / 100;
+    const line_items = await stripe.checkout.sessions.listLineItems(session.data[0].id)
+    cartProds = await Promise.all(line_items.data.map( async item => {
+      const product = await Product.findOne({ where: { name: item.description } });
+    return {
+        cartProductId: item.id,
+        quantitySelected: item.quantity,
+        product: product.dataValues
+      }
+    })
+  )
     orderItem.cartProducts = cartProds;
     return orderItem;
   })
+
 )
     return res.send({
       success: true,
